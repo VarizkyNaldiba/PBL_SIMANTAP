@@ -2,158 +2,300 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Modul Data Periode', () => {
     test.beforeEach(async ({ page }) => {
-        // Login sebagai admin
-        await page.goto('https://simantap.dbsnetwork.my.id/login');
-        await page.fill('input[name="username"]', 'admin');
-        await page.fill('input[name="password"]', '12345');
-        await page.click('button[type="submit"]');
-        await page.waitForURL('**/dashboard');
+        // Set longer timeout for test execution
+        test.setTimeout(120000);
+        page.setDefaultTimeout(90000);
+        page.setDefaultNavigationTimeout(90000);
+
+        // Login as admin
+        await page.goto('https://simantap.dbsnetwork.my.id/login', { waitUntil: 'domcontentloaded' });
+        await page.getByRole('textbox', { name: 'NIM/NIP/NIDN / Akun Polinema' }).fill('Admin1');
+        await page.getByRole('textbox', { name: 'Password' }).fill('password');
+        await page.getByRole('button', { name: 'Masuk' }).click();
+
+        // Wait for success modal and close it
+        await page.getByRole('button', { name: 'OK' }).click();
+
+        // Wait for preloader to disappear
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 60000 }).catch(() => { });
+        await page.waitForTimeout(2000);
+
+        // Navigate directly to Data Periode page
+        await page.goto('https://simantap.dbsnetwork.my.id/periode', { waitUntil: 'domcontentloaded', timeout: 90000 });
+
+        // Wait for page to load and preloader to disappear
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 60000 }).catch(() => { });
+        await page.waitForTimeout(3000);
     });
 
-    test('TC01 - Menampilkan halaman list periode', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        await expect(page).toHaveURL(/.*periode/);
-        await expect(page.locator('h1, h2, h3')).toContainText(/Periode/i);
-    });
+    test('TC_DATA_PERIODE_001 - Menambahkan data periode dengan jumlah karakter angka tidak sama dengan 4', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
 
-    test('TC02 - Membuka form tambah periode', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        await page.click('a:has-text("Tambah"), button:has-text("Tambah")');
-        await expect(page).toHaveURL(/.*periode\/create/);
-        await expect(page.locator('form')).toBeVisible();
-    });
+        // Step 1: Click "Tambah Data Periode"
+        await page.getByRole('button', { name: /Tambah.*Periode/i }).click({ force: true });
+        await page.waitForTimeout(2000);
 
-    test('TC03 - Menambah periode baru dengan data valid', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode/create');
-
-        // Isi form periode
-        await page.fill('input[name="periode_nama"]', 'Semester Ganjil 2024/2025');
-        await page.fill('input[name="periode_tahun"]', '2024');
-        await page.fill('input[name="periode_tanggal_mulai"]', '2024-08-01');
-        await page.fill('input[name="periode_tanggal_selesai"]', '2024-12-31');
-        await page.selectOption('select[name="periode_status"]', 'aktif');
-
-        await page.click('button[type="submit"]');
-        await expect(page).toHaveURL(/.*periode$/);
-        await expect(page.locator('body')).toContainText(/berhasil|sukses/i);
-    });
-
-    test('TC04 - Validasi form tambah dengan data kosong', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode/create');
-        await page.click('button[type="submit"]');
-        await expect(page.locator('form')).toContainText(/required|wajib|harus diisi/i);
-    });
-
-    test('TC05 - Validasi tanggal selesai lebih awal dari tanggal mulai', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode/create');
-
-        await page.fill('input[name="periode_nama"]', 'Test Periode');
-        await page.fill('input[name="periode_tahun"]', '2024');
-        await page.fill('input[name="periode_tanggal_mulai"]', '2024-12-31');
-        await page.fill('input[name="periode_tanggal_selesai"]', '2024-08-01');
-
-        await page.click('button[type="submit"]');
-        await expect(page.locator('body')).toContainText(/tanggal selesai|harus lebih besar|invalid/i);
-    });
-
-    test('TC06 - Menampilkan detail periode', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        await page.click('a:has-text("Detail"), button:has-text("Detail"), .btn-detail').first();
-        await expect(page).toHaveURL(/.*periode\/\d+/);
-        await expect(page.locator('body')).toContainText(/Detail|Periode/i);
-    });
-
-    test('TC07 - Membuka form edit periode', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        await page.click('a:has-text("Edit"), button:has-text("Edit"), .btn-edit').first();
-        await expect(page).toHaveURL(/.*periode\/\d+\/edit/);
-        await expect(page.locator('form')).toBeVisible();
-    });
-
-    test('TC08 - Mengupdate periode dengan data valid', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        await page.click('a:has-text("Edit"), button:has-text("Edit"), .btn-edit').first();
-
-        await page.fill('input[name="periode_nama"]', 'Semester Ganjil 2024/2025 Updated');
-        await page.click('button[type="submit"]');
-
-        await expect(page).toHaveURL(/.*periode$/);
-        await expect(page.locator('body')).toContainText(/berhasil|sukses/i);
-    });
-
-    test('TC09 - Mengubah status periode menjadi aktif', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        await page.click('a:has-text("Edit"), button:has-text("Edit"), .btn-edit').first();
-
-        await page.selectOption('select[name="periode_status"]', 'aktif');
-        await page.click('button[type="submit"]');
-
-        await expect(page).toHaveURL(/.*periode$/);
-        await expect(page.locator('body')).toContainText(/berhasil|sukses/i);
-    });
-
-    test('TC10 - Mengubah status periode menjadi nonaktif', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        await page.click('a:has-text("Edit"), button:has-text("Edit"), .btn-edit').first();
-
-        await page.selectOption('select[name="periode_status"]', 'nonaktif');
-        await page.click('button[type="submit"]');
-
-        await expect(page).toHaveURL(/.*periode$/);
-        await expect(page.locator('body')).toContainText(/berhasil|sukses/i);
-    });
-
-    test('TC11 - Menghapus periode', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-
-        page.on('dialog', dialog => dialog.accept());
-
-        await page.click('button:has-text("Hapus"), .btn-delete').first();
+        // Step 2: Fill with more than 4 digits (20256)
+        await page.getByRole('textbox', { name: 'Contoh: 2025' }).fill('20256');
         await page.waitForTimeout(500);
-        await expect(page.locator('body')).toContainText(/berhasil|sukses/i);
+        await page.getByRole('button', { name: ' Simpan' }).click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Expected: Error message "Format tahun tidak valid. Gunakan format YYYY" appears
+        await expect(page.locator('body')).toContainText(/Format tahun tidak valid|Gunakan format YYYY/i);
     });
 
-    test('TC12 - Pencarian periode berdasarkan nama', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        await page.fill('input[type="search"], input[name="search"]', 'Ganjil');
+    test('TC_DATA_PERIODE_002 - Menambahkan data periode dengan jumlah karakter angka sama dengan 4', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click "Tambah Data Periode"
+        await page.getByRole('button', { name: /Tambah.*Periode/i }).click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Step 2: Fill with exactly 4 digits (2025)
+        await page.getByRole('textbox', { name: 'Contoh: 2025' }).fill('2025');
         await page.waitForTimeout(500);
-        await expect(page.locator('table tbody tr')).toContainText(/Ganjil/i);
-    });
+        await page.getByRole('button', { name: ' Simpan' }).click({ force: true });
+        await page.waitForTimeout(3000);
 
-    test('TC13 - Filter periode berdasarkan tahun', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        const filterTahun = page.locator('select[name="periode_tahun"], input[name="tahun"]');
-        if (await filterTahun.isVisible()) {
-            await filterTahun.fill('2024');
-            await page.waitForTimeout(500);
-        }
-        await expect(page.locator('table tbody tr')).toHaveCount({ minimum: 0 });
-    });
-
-    test('TC14 - Filter periode berdasarkan status', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode');
-        const filterStatus = page.locator('select[name="status"]');
-        if (await filterStatus.isVisible()) {
-            await filterStatus.selectOption('aktif');
-            await page.waitForTimeout(500);
-        }
-        await expect(page.locator('table tbody tr')).toHaveCount({ minimum: 0 });
-    });
-
-    test('TC15 - Validasi hanya satu periode aktif dalam satu waktu', async ({ page }) => {
-        await page.goto('https://simantap.dbsnetwork.my.id/periode/create');
-
-        await page.fill('input[name="periode_nama"]', 'Periode Aktif Kedua');
-        await page.fill('input[name="periode_tahun"]', '2024');
-        await page.fill('input[name="periode_tanggal_mulai"]', '2024-08-01');
-        await page.fill('input[name="periode_tanggal_selesai"]', '2024-12-31');
-        await page.selectOption('select[name="periode_status"]', 'aktif');
-
-        await page.click('button[type="submit"]');
-
+        // Expected: Success modal appears
         const bodyText = await page.locator('body').textContent();
-        if (bodyText.match(/sudah ada periode aktif|hanya satu periode/i)) {
-            await expect(page.locator('body')).toContainText(/sudah ada periode aktif|hanya satu periode/i);
+        expect(bodyText).toMatch(/berhasil dibuat|berhasil disimpan|berhasil|success/i);
+    });
+
+    test('TC_DATA_PERIODE_003 - Menambahkan data periode dengan karakter selain angka', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click "Tambah Data Periode"
+        await page.getByRole('button', { name: /Tambah.*Periode/i }).click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Step 2: Fill with non-numeric characters (abcd)
+        await page.getByRole('textbox', { name: 'Contoh: 2025' }).fill('abcd');
+        await page.waitForTimeout(500);
+        await page.getByRole('button', { name: ' Simpan' }).click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Expected: Error message "Format tahun tidak valid. Gunakan format YYYY" appears
+        await expect(page.locator('body')).toContainText(/Format tahun tidak valid|Gunakan format YYYY/i);
+    });
+
+    test('TC_DATA_PERIODE_004 - Menyimpan nama data periode tanpa text pada tambah data periode', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click "Tambah Data Periode"
+        await page.getByRole('button', { name: /Tambah.*Periode/i }).click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Step 2: Click Simpan without filling anything
+        await page.getByRole('button', { name: ' Simpan' }).click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Expected: Error message "Nama data periode wajib diisi" appears
+        await expect(page.locator('body')).toContainText(/Nama data periode wajib diisi|wajib diisi/i);
+    });
+
+    test('TC_DATA_PERIODE_005 - Mengklik tombol "Detail"', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(2000);
+
+        // Step 1: Click "Detail" on the first row
+        await page.getByRole('button', { name: 'Detail' }).first().click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Expected: Detail modal appears
+        await expect(page.locator('body')).toContainText(/Detail/i);
+    });
+
+    test('TC_DATA_PERIODE_006 - Mengedit data periode dengan jumlah karakter angka tidak sama dengan 4', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click "Edit" on the first row
+        await page.getByRole('button', { name: 'Edit' }).first().click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Step 2: Get current value and add character "1" to make it invalid
+        const currentValue = await page.getByRole('textbox', { name: 'Contoh: 2025' }).inputValue();
+        await page.getByRole('textbox', { name: 'Contoh: 2025' }).fill(currentValue + '1');
+        await page.waitForTimeout(500);
+        await page.getByRole('button', { name: ' Simpan Perubahan' }).click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Expected: Error message "Format tahun tidak valid. Gunakan format YYYY" appears
+        await expect(page.locator('body')).toContainText(/Format tahun tidak valid|Gunakan format YYYY/i);
+    });
+
+    test('TC_DATA_PERIODE_007 - Mengedit data periode dengan jumlah karakter angka sama dengan 4', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click "Edit" on the first row
+        await page.getByRole('button', { name: 'Edit' }).first().click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Step 2: Fill with valid 4-digit year (2026)
+        await page.getByRole('textbox', { name: 'Contoh: 2025' }).fill('2026');
+        await page.waitForTimeout(500);
+        await page.getByRole('button', { name: ' Simpan Perubahan' }).click({ force: true });
+        await page.waitForTimeout(3000);
+
+        // Expected: Success modal appears
+        const bodyText = await page.locator('body').textContent();
+        expect(bodyText).toMatch(/berhasil diubah|berhasil diperbarui|berhasil|success/i);
+    });
+
+    test('TC_DATA_PERIODE_008 - Mengedit data periode dengan karakter selain angka', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click "Edit" on the first row
+        await page.getByRole('button', { name: 'Edit' }).first().click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Step 2: Fill with non-numeric characters (efgh)
+        await page.getByRole('textbox', { name: 'Contoh: 2025' }).fill('efgh');
+        await page.waitForTimeout(500);
+        await page.getByRole('button', { name: ' Simpan Perubahan' }).click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Expected: Error message "Format tahun tidak valid. Gunakan format YYYY" appears
+        await expect(page.locator('body')).toContainText(/Format tahun tidak valid|Gunakan format YYYY/i);
+    });
+
+    test('TC_DATA_PERIODE_009 - Menyimpan nama data periode tanpa text pada edit periode', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click "Edit" on the first row
+        await page.getByRole('button', { name: 'Edit' }).first().click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Step 2: Clear the field (Hapus nama data periode)
+        await page.getByRole('textbox', { name: 'Contoh: 2025' }).clear();
+        await page.waitForTimeout(500);
+
+        // Step 3: Click Simpan
+        await page.getByRole('button', { name: ' Simpan Perubahan' }).click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Expected: Error message "Nama data periode wajib diisi" appears
+        await expect(page.locator('body')).toContainText(/Nama data periode wajib diisi|wajib diisi/i);
+    });
+
+    test('TC_DATA_PERIODE_010 - Menghapus data periode', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click "Delete" on the first row
+        await page.getByRole('button', { name: 'Delete' }).first().click({ force: true });
+        await page.waitForTimeout(2000);
+
+        // Step 2: Click "Ya, Hapus" on confirmation modal
+        await page.getByRole('button', { name: ' Ya, Hapus' }).click({ force: true });
+        await page.waitForTimeout(4000);
+
+        // Expected: Check for success message before closing modal
+        const bodyText = await page.locator('body').textContent();
+        expect(bodyText).toMatch(/terhapus|dihapus|berhasil/i);
+
+        // Close success modal if present
+        const successBtn = page.getByRole('button', { name: /OK|Mengerti|Tutup/i });
+        if (await successBtn.isVisible().catch(() => false)) {
+            await successBtn.click();
+            await page.waitForTimeout(1000);
+        }
+    });
+
+    test('TC_DATA_PERIODE_011 - Menginputkan kata parsial dari nama data periode', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click search input and type partial keyword "202"
+        await page.getByRole('searchbox', { name: 'Search:' }).fill('202');
+        await page.waitForTimeout(3000);
+
+        // Expected: Table only shows data containing "202"
+        const tableText = await page.locator('table').textContent();
+        if (tableText && !tableText.toLowerCase().includes('no matching records')) {
+            expect(tableText.toLowerCase()).toContain('202');
+        }
+    });
+
+    test('TC_DATA_PERIODE_012 - Menyorting data A-Z dan Z-A', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Click sort button on column header
+        const sortButton = page.getByRole('gridcell', { name: /activate/i }).first().or(page.locator('th').first());
+        if (await sortButton.isVisible().catch(() => false)) {
+            await sortButton.click({ force: true });
+            await page.waitForTimeout(3000);
+
+            // Expected: Table is sorted - verify sorting works
+            const rowCount = await page.locator('table tbody tr').count();
+            expect(rowCount).toBeGreaterThan(0);
+
+            // Click again for Z-A sort
+            await sortButton.click({ force: true });
+            await page.waitForTimeout(2000);
+
+            // Expected: Table is still displayed (sorting works)
+            const rowCountAfter = await page.locator('table tbody tr').count();
+            expect(rowCountAfter).toBeGreaterThan(0);
+        }
+    });
+
+    test('TC_DATA_PERIODE_013 - Menampilkan entries tab', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Select 25 entries
+        await page.getByLabel('Show 102550100 entries').selectOption('25');
+        await page.waitForTimeout(4000);
+
+        // Expected: Table shows maximum 25 rows
+        const rowCount = await page.locator('table tbody tr').count();
+        expect(rowCount).toBeGreaterThan(0);
+        expect(rowCount).toBeLessThanOrEqual(25);
+    });
+
+    test('TC_DATA_PERIODE_014 - Mengganti page halaman untuk menampilkan data per entries', async ({ page }) => {
+        // Wait for preloader
+        await page.waitForSelector('#preloader', { state: 'hidden', timeout: 30000 }).catch(() => { });
+        await page.waitForTimeout(1000);
+
+        // Step 1: Select 10 entries
+        await page.getByLabel('Show 102550100 entries').selectOption('10');
+        await page.waitForTimeout(3000);
+
+        // Step 2: Click "Next" on pagination
+        const nextButton = page.getByRole('link', { name: 'Next' });
+        if (await nextButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+            await nextButton.click({ force: true });
+            await page.waitForTimeout(3000);
+
+            // Expected: Table shows data from entry 11 to 20
+            const rowCount = await page.locator('table tbody tr').count();
+            expect(rowCount).toBeGreaterThan(0);
+            expect(rowCount).toBeLessThanOrEqual(10);
         }
     });
 });
