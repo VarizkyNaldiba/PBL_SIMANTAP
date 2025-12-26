@@ -9,8 +9,8 @@ test.describe('Modul Data Periode', () => {
 
         // Login as admin
         await page.goto('https://simantap.dbsnetwork.my.id/login', { waitUntil: 'domcontentloaded' });
-        await page.getByRole('textbox', { name: 'NIM/NIP/NIDN / Akun Polinema' }).fill('Admin1');
-        await page.getByRole('textbox', { name: 'Password' }).fill('password');
+        await page.getByRole('textbox', { name: 'NIM/NIP/NIDN / Akun Polinema' }).fill('admin');
+        await page.getByRole('textbox', { name: 'Password' }).fill('12345');
         await page.getByRole('button', { name: 'Masuk' }).click();
 
         // Wait for success modal and close it

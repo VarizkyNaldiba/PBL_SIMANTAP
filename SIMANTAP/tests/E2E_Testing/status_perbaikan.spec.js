@@ -9,8 +9,8 @@ test.describe('Modul Status Perbaikan', () => {
 
         // Login as Mahasiswa
         await page.goto('https://simantap.dbsnetwork.my.id/login', { waitUntil: 'domcontentloaded' });
-        await page.getByRole('textbox', { name: 'NIM/NIP/NIDN / Akun Polinema' }).fill('mahasiswa1');
-        await page.getByRole('textbox', { name: 'Password' }).fill('password');
+        await page.getByRole('textbox', { name: 'NIM/NIP/NIDN / Akun Polinema' }).fill('Dosen');
+        await page.getByRole('textbox', { name: 'Password' }).fill('12345');
         await page.getByRole('button', { name: 'Masuk' }).click();
 
         // Wait for success modal and close it
